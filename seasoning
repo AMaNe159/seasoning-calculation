@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>調味料単位換算ツール</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+            gap: 10px;
+            padding: 0 10px;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s ease;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .tab:hover {
+            background-color: #f8f9fa;
+            color: #4CAF50;
+        }
+
+        .tab.active {
+            border-bottom: 3px solid #4CAF50;
+            color: #4CAF50;
+            background-color: #f1f8f1;
+        }
+
+
+        .converter-container {
+            display: none;
+        }
+
+        .converter-container.active {
+            display: block;
+        }
+
+        .input-group {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        .seasoning-selection {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        select, input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .category-select, .seasoning-select {
+            min-width: 200px;
+        }
+
+        input {
+            width: 100px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+        }
+
+        .result h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .result ul {
+            list-style: none;
+        }
+
+        .result li {
+            margin-bottom: 5px;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .multi-convert {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .conversion-item {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .conversion-item .seasoning-selection {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.conversion-item .category-select,
+.conversion-item .seasoning-select {
+    flex: 1;
+    min-width: 200px;
+}
+
+
+
+        .delete-btn {
+            background-color: #ff4444;
+            margin-left: auto;
+        }
+
+        .delete-btn:hover {
+            background-color: #cc0000;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        @media (max-width: 600px) {
+            .input-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            select, input {
+                width: 100%;
+            }
+
+            .conversion-item {
+                padding: 10px;
+            }
+
+            .seasoning-selection {
+                flex-direction: column;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>調味料単位換算ツール</h1>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('single')">単体換算</button>
+            <button class="tab" onclick="switchTab('multiple')">複数換算</button>
+        </div>
+
+        <div id="single-converter" class="converter-container active">
+            <div class="input-group">
+                <div class="seasoning-selection" id="single-seasoning-container"></div>
+                <input type="number" id="amount-single" min="0" step="0.1" value="1" placeholder="数値を入力">
+                <select id="unit-from-single">
+                    <option value="">単位を選択</option>
+                </select>
+                <button onclick="convertSingle()">換算</button>
+            </div>
+            <div id="result-single" class="result"></div>
+        </div>
+
+        <div id="multiple-converter" class="converter-container">
+            <div class="multi-convert" id="multi-inputs"></div>
+            <button onclick="addConversionItem()">項目を追加</button>
+            <button onclick="convertMultiple()">一括換算</button>
+            <div id="result-multiple" class="result"></div>
+        </div>
+
+        <div id="reverse-converter" class="converter-container">
+            <div class="input-group">
+                <div class="seasoning-selection" id="reverse-seasoning-container"></div>
+                <input type="number" id="amount-reverse" min="0" step="0.1" value="1" placeholder="目標の量">
+                <select id="unit-to-reverse">
+                    <option value="">目標単位を選択</option>
+                </select>
+                <button onclick="convertReverse()">換算</button>
+            </div>
+            <div id="result-reverse" class="result"></div>
+        </div>
+
+        <div class="footer">
+            <p>※ 換算値は室温（20-25℃）での一般的な値を使用しています。</p>
+            <p>※ 調味料の種類や温度により、実際の重さや体積が異なる場合があります。</p>
+        </div>
+    </div>
+
+
+    <script>
+        // 調味料データベース
+        const seasonings = {
+            soy_sauce: {
+                name: "醤油",
+                conversions: {
+                    tbsp: 18,    // 大さじ1 = 18ml
+                    tsp: 6,      // 小さじ1 = 6ml
+                    cup: 200,    // カップ1 = 200ml
+                    ml: 1,
+                    g: 1.07      // 比重約1.07
+                }
+            },
+            mirin: {
+                name: "みりん",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1.03
+                }
+            },
+            sake: {
+                name: "酒",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1
+                }
+            },
+            sugar: {
+                name: "砂糖",
+                conversions: {
+                    tbsp: 9,     // 大さじ1 = 9g
+                    tsp: 3,      // 小さじ1 = 3g
+                    cup: 200,
+                    g: 1,
+                    ml: 0.85     // 比重約0.85
+                }
+            },
+            salt: {
+                name: "塩",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 240,
+                    g: 1,
+                    ml: 0.9
+                }
+            },
+            vinegar: {
+                name: "酢",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1.01
+                }
+            },
+            miso: {
+                name: "味噌",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    g: 1,
+                    ml: 0.95
+                }
+            },
+            honey: {
+                name: "はちみつ",
+                conversions: {
+                    tbsp: 21,    // 大さじ1 = 21g
+                    tsp: 7,      // 小さじ1 = 7g
+                    cup: 240,
+                    g: 1,
+                    ml: 0.7
+                }
+            },
+            sesame_oil: {
+                name: "ごま油",
+                conversions: {
+                    tbsp: 14,    // 大さじ1 = 14g
+                    tsp: 4.6,    // 小さじ1 = 4.6g
+                    cup: 200,
+                    ml: 1,
+                    g: 0.92
+                }
+            },
+            oyster_sauce: {
+                name: "オイスターソース",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1.1
+                }
+            },
+            dashi: {
+                name: "だし",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1
+                }
+            },
+            ponzu: {
+                name: "ポン酢",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1.05
+                }
+            },
+            mayonnaise: {
+                name: "マヨネーズ",
+                conversions: {
+                    tbsp: 15,
+                    tsp: 5,
+                    cup: 200,
+                    ml: 1,
+                    g: 0.92
+                }
+            },
+            ketchup: {
+                name: "ケチャップ",
+                conversions: {
+                    tbsp: 17,
+                    tsp: 5.7,
+                    cup: 200,
+                    ml: 1,
+                    g: 1.04
+                }
+            },
+            worcestershire_sauce: {
+                name: "ウスターソース",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1.05
+                }
+            },
+            rice_vinegar: {
+                name: "米酢",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1.02
+                }
+            },
+            mentsuyu: {
+                name: "めんつゆ",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1.08
+                }
+            },
+            doubanjiang: {
+                name: "豆板醤",
+                conversions: {
+                    tbsp: 16,
+                    tsp: 5.3,
+                    cup: 200,
+                    g: 1,
+                    ml: 0.95
+                }
+            },
+            gochujang: {
+                name: "コチュジャン",
+                conversions: {
+                    tbsp: 16,
+                    tsp: 5.3,
+                    cup: 200,
+                    g: 1,
+                    ml: 0.95
+                }
+            },
+            black_vinegar: {
+                name: "黒酢",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1.03
+                }
+            },
+            tahini: {
+                name: "タヒニ",
+                conversions: {
+                    tbsp: 15,
+                    tsp: 5,
+                    cup: 200,
+                    ml: 1,
+                    g: 0.97
+                }
+            },
+            tonkatsu_sauce: {
+                name: "とんかつソース",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1.06
+                }
+            },
+            chili_oil: {
+                name: "ラー油",
+                conversions: {
+                    tbsp: 14,
+                    tsp: 4.6,
+                    cup: 200,
+                    ml: 1,
+                    g: 0.92
+                }
+            },
+            white_wine: {
+                name: "白ワイン",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 0.99
+                }
+            },
+            cooking_sake: {
+                name: "料理酒",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1
+                }
+            },
+            yuzu_juice: {
+                name: "柚子果汁",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1.02
+                }
+            },
+            fish_sauce: {
+                name: "ナンプラー",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1.12
+                }
+            },
+            hoisin_sauce: {
+                name: "オイスターソース",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1.08
+                }
+            },
+            shiokoji: {
+                name: "塩麹",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    g: 1,
+                    ml: 0.95
+                }
+            },
+            gochugaru: {
+                name: "コチュガル",
+                conversions: {
+                    tbsp: 9,
+                    tsp: 3,
+                    cup: 200,
+                    g: 1,
+                    ml: 0.85
+                }
+            },
+            xo_sauce: {
+                name: "XO醤",
+                conversions: {
+                    tbsp: 16,
+                    tsp: 5.3,
+                    cup: 200,
+                    g: 1,
+                    ml: 0.95
+                }
+            },
+            tianmianjiang: {
+                name: "甜麺醤",
+                conversions: {
+                    tbsp: 16,
+                    tsp: 5.3,
+                    cup: 200,
+                    g: 1,
+                    ml: 0.95
+                }
+            },
+            shaoxing_wine: {
+                name: "紹興酒",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1.02
+                }
+            },
+            dark_soy_sauce: {
+                name: "老抽（濃口醤油）",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 1.12
+                }
+            },
+            olive_oil: {
+                name: "オリーブオイル",
+                conversions: {
+                    tbsp: 14,
+                    tsp: 4.6,
+                    cup: 200,
+                    ml: 1,
+                    g: 0.92
+                }
+            },
+            tomato_paste: {
+                name: "トマトペースト",
+                conversions: {
+                    tbsp: 15,
+                    tsp: 5,
+                    cup: 200,
+                    g: 1,
+                    ml: 0.96
+                }
+            },
+            dijon_mustard: {
+                name: "ディジョンマスタード",
+                conversions: {
+                    tbsp: 15,
+                    tsp: 5,
+                    cup: 200,
+                    ml: 1,
+                    g: 0.97
+                }
+            },
+            red_wine: {
+                name: "赤ワイン",
+                conversions: {
+                    tbsp: 18,
+                    tsp: 6,
+                    cup: 200,
+                    ml: 1,
+                    g: 0.99
+                }
+            }
+        };
+
+        // 調味料のカテゴリー定義
+        const seasoningCategories = {
+            basic: {
+                name: "基本調味料",
+                items: ["soy_sauce", "salt", "sugar", "mirin", "sake", "vinegar", "miso"]
+            },
+            oil: {
+                name: "油類",
+                items: ["sesame_oil", "olive_oil", "chili_oil"]
+            },
+            sauce: {
+                name: "ソース類",
+                items: ["oyster_sauce", "worcestershire_sauce", "tonkatsu_sauce", "mayonnaise", "ketchup", "hoisin_sauce"]
+            },
+            asian_fermented: {
+                name: "アジアの発酵調味料",
+                items: ["doubanjiang", "gochujang", "tianmianjiang", "dark_soy_sauce", "fish_sauce"]
+            },
+            vinegar_based: {
+                name: "酢・ビネガー類",
+                items: ["rice_vinegar", "black_vinegar", "ponzu"]
+            },
+            japanese_condiments: {
+                name: "和風調味料",
+                items: ["dashi", "mentsuyu", "shiokoji", "yuzu_juice", "soy_sauce", "mirin", "sake", "miso"]
+            },
+            korean_condiments: {
+                name: "韓国調味料",
+                items: ["gochujang", "gochugaru"]
+            },
+            chinese_condiments: {
+                name: "中華調味料",
+                items: ["doubanjiang", "tianmianjiang", "xo_sauce", "shaoxing_wine", "dark_soy_sauce", "oyster_sauce"]
+            },
+            western_condiments: {
+                name: "洋風調味料",
+                items: ["olive_oil", "dijon_mustard", "white_wine", "red_wine", "tomato_paste"]
+            },
+            sweet_spreads: {
+                name: "甘味調味料",
+                items: ["honey", "sugar"]
+            }
+        };
+
+        const unitNames = {
+            tbsp: "大さじ",
+            tsp: "小さじ",
+            cup: "カップ",
+            ml: "ml",
+            g: "g"
+        };
+
+        function createCategorySelect(containerId) {
+            const container = containerId ? document.getElementById(containerId) : document.createElement('div');
+            const categorySelect = document.createElement('select');
+            categorySelect.className = 'category-select';
+            categorySelect.innerHTML = '<option value="">すべてのカテゴリー</option>';
+            
+            Object.keys(seasoningCategories).forEach(key => {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = seasoningCategories[key].name;
+                categorySelect.appendChild(option);
+            });
+            
+            const seasoningSelect = document.createElement('select');
+            seasoningSelect.className = 'seasoning-select';
+            seasoningSelect.innerHTML = '<option value="">調味料を選択</option>';
+            
+            // 最初に全ての調味料を表示
+            Object.keys(seasonings).forEach(key => {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = seasonings[key].name;
+                seasoningSelect.appendChild(option);
+            });
+            
+            categorySelect.addEventListener('change', () => {
+                updateSeasoningSelect(seasoningSelect, categorySelect.value);
+            });
+            
+            if (containerId) {
+                container.appendChild(categorySelect);
+                container.appendChild(seasoningSelect);
+            }
+            
+            return seasoningSelect;
+        }
+
+        // 調味料セレクトボックスを更新する関数を修正
+        function updateSeasoningSelect(seasoningSelect, categoryKey) {
+            seasoningSelect.innerHTML = '<option value="">調味料を選択</option>';
+            
+            if (!categoryKey) {
+                // カテゴリーが選択されていない場合は全ての調味料を表示
+                Object.keys(seasonings).forEach(key => {
+                    const seasoning = seasonings[key];
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = seasoning.name;
+                    seasoningSelect.appendChild(option);
+                });
+            } else {
+                // カテゴリーが選択されている場合は該当する調味料のみを表示
+                const category = seasoningCategories[categoryKey];
+                category.items.forEach(seasoningKey => {
+                    const seasoning = seasonings[seasoningKey];
+                    if (seasoning) {
+                        const option = document.createElement('option');
+                        option.value = seasoningKey;
+                        option.textContent = seasoning.name;
+                        seasoningSelect.appendChild(option);
+                    }
+                });
+            }
+        }
+
+
+        // 初期化
+        function init() {
+            // 単位セレクトボックスの準備
+            const unitSelects = ['unit-from-single', 'unit-to-reverse'];
+            
+            unitSelects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                select.innerHTML = '<option value="">単位を選択</option>';
+                Object.keys(unitNames).forEach(key => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = unitNames[key];
+                    select.appendChild(option);
+                });
+            });
+
+            // カテゴリー付き調味料セレクトボックスの作成
+            const singleSeasoningSelect = createCategorySelect('single-seasoning-container');
+            const reverseSeasoningSelect = createCategorySelect('reverse-seasoning-container');
+
+            // セレクトボックスのIDを設定
+            singleSeasoningSelect.id = 'seasoning-single';
+            reverseSeasoningSelect.id = 'seasoning-reverse';
+
+            // 複数換算の最初の項目を追加
+            addConversionItem();
+        }
+
+        // タブ切り替え
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.converter-container').forEach(container => container.classList.remove('active'));
+            
+            const selectedTab = document.querySelector(`.tab:nth-child(${tabName === 'single' ? 1 : tabName === 'multiple' ? 2 : 3})`);
+            const selectedContainer = document.getElementById(`${tabName}-converter`);
+            
+            selectedTab.classList.add('active');
+            selectedContainer.classList.add('active');
+        }
+
+        // 単体換算
+        function convertSingle() {
+            const seasoning = document.getElementById('seasoning-single').value;
+            const amount = parseFloat(document.getElementById('amount-single').value);
+            const unitFrom = document.getElementById('unit-from-single').value;
+            
+            if (!seasoning || isNaN(amount) || !unitFrom) {
+                alert('すべての項目を入力してください。');
+                return;
+            }
+
+            const result = convert(seasoning, amount, unitFrom);
+            displayResult('result-single', result);
+        }
+
+        // 複数換算アイテムの追加関数を修正
+        function addConversionItem() {
+    const container = document.getElementById('multi-inputs');
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'conversion-item';
+    
+    const seasoningContainer = document.createElement('div');
+    seasoningContainer.className = 'seasoning-selection';
+
+    // カテゴリー選択用のセレクトボックスを作成
+    const categorySelect = document.createElement('select');
+    categorySelect.className = 'category-select';
+    categorySelect.innerHTML = '<option value="">すべてのカテゴリー</option>';
+    
+    Object.keys(seasoningCategories).forEach(key => {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = seasoningCategories[key].name;
+        categorySelect.appendChild(option);
+    });
+
+    // 調味料選択用のセレクトボックスを作成
+    const seasoningSelect = document.createElement('select');
+    seasoningSelect.className = 'seasoning-select';
+    seasoningSelect.innerHTML = '<option value="">調味料を選択</option>';
+    
+    // 最初に全ての調味料を表示
+    Object.keys(seasonings).forEach(key => {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = seasonings[key].name;
+        seasoningSelect.appendChild(option);
+    });
+
+    // カテゴリー選択時のイベントリスナーを追加
+    categorySelect.addEventListener('change', () => {
+        updateSeasoningSelect(seasoningSelect, categorySelect.value);
+    });
+
+    seasoningContainer.appendChild(categorySelect);
+    seasoningContainer.appendChild(seasoningSelect);
+
+    const amountInput = document.createElement('input');
+    amountInput.type = 'number';
+    amountInput.min = '0';
+    amountInput.step = '0.1';
+    amountInput.value = '1';
+    amountInput.placeholder = '数値を入力';
+
+    const unitSelect = document.createElement('select');
+    unitSelect.innerHTML = '<option value="">単位を選択</option>';
+    Object.keys(unitNames).forEach(key => {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = unitNames[key];
+        unitSelect.appendChild(option);
+    });
+
+    const deleteButton = document.createElement('button');
+    deleteButton.textContent = '削除';
+    deleteButton.className = 'delete-btn';
+    deleteButton.onclick = () => {
+        if (container.children.length > 1) {
+            itemDiv.remove();
+        }
+    };
+
+    itemDiv.appendChild(seasoningContainer);
+    itemDiv.appendChild(amountInput);
+    itemDiv.appendChild(unitSelect);
+    itemDiv.appendChild(deleteButton);
+    container.appendChild(itemDiv);
+}
+
+        // 複数換算
+        function convertMultiple() {
+            const items = document.querySelectorAll('.conversion-item');
+            const results = [];
+
+            items.forEach(item => {
+                const seasoning = item.querySelector('.seasoning-select').value;
+                const amount = parseFloat(item.querySelector('input').value);
+                const unitFrom = item.querySelector('select:last-of-type').value;
+
+                if (seasoning && !isNaN(amount) && unitFrom) {
+                    const result = convert(seasoning, amount, unitFrom);
+                    results.push({
+                        seasoning: seasonings[seasoning].name,
+                        conversions: result
+                    });
+                }
+            });
+
+            if (results.length === 0) {
+                alert('少なくとも1つの項目を正しく入力してください。');
+                return;
+            }
+
+            displayMultipleResults('result-multiple', results);
+        }
+
+        // 逆換算
+        function convertReverse() {
+            const seasoning = document.getElementById('seasoning-reverse').value;
+            const targetAmount = parseFloat(document.getElementById('amount-reverse').value);
+            const targetUnit = document.getElementById('unit-to-reverse').value;
+
+            if (!seasoning || isNaN(targetAmount) || !targetUnit) {
+                alert('すべての項目を入力してください。');
+                return;
+            }
+
+            const result = convertToSpoons(seasoning, targetAmount, targetUnit);
+            displayReverseResult('result-reverse', result);
+        }
+
+        // 換算処理
+        function convert(seasoningKey, amount, unitFrom) {
+            const seasoning = seasonings[seasoningKey];
+            const baseAmount = amount * seasoning.conversions[unitFrom];
+            
+            const result = {};
+            Object.keys(seasoning.conversions).forEach(unitTo => {
+                result[unitTo] = baseAmount / seasoning.conversions[unitTo];
+            });
+            
+            return result;
+        }
+
+        // 逆換算処理
+        function convertToSpoons(seasoningKey, targetAmount, targetUnit) {
+            const seasoning = seasonings[seasoningKey];
+            const baseAmount = targetAmount * seasoning.conversions[targetUnit];
+            
+            return {
+                tbsp: Math.round((baseAmount / seasoning.conversions.tbsp) * 100) / 100,
+                tsp: Math.round((baseAmount / seasoning.conversions.tsp) * 100) / 100
+            };
+        }
+
+        // 結果表示（単体）
+        function displayResult(elementId, result) {
+            const resultDiv = document.getElementById(elementId);
+            let html = '<h3>換算結果:</h3><ul>';
+            
+            Object.keys(result).forEach(unit => {
+                const value = Math.round(result[unit] * 100) / 100;
+                html += `<li>${unitNames[unit]}: ${value} ${unit === 'tbsp' || unit === 'tsp' ? '杯' : unit}</li>`;
+            });
+            
+            html += '</ul>';
+            resultDiv.innerHTML = html;
+        }
+
+        // 結果表示（複数）
+        function displayMultipleResults(elementId, results) {
+            const resultDiv = document.getElementById(elementId);
+            let html = '<h3>換算結果:</h3>';
+            
+            results.forEach(result => {
+                html += `<h4>${result.seasoning}</h4><ul>`;
+                Object.keys(result.conversions).forEach(unit => {
+                    const value = Math.round(result.conversions[unit] * 100) / 100;
+                    html += `<li>${unitNames[unit]}: ${value} ${unit === 'tbsp' || unit === 'tsp' ? '杯' : unit}</li>`;
+                });
+                html += '</ul>';
+            });
+            
+            resultDiv.innerHTML = html;
+        }
+
+        // 結果表示（逆換算）
+        function displayReverseResult(elementId, result) {
+            const resultDiv = document.getElementById(elementId);
+            let html = '<h3>計量スプーン換算:</h3><ul>';
+            
+            if (result.tbsp >= 1) {
+                html += `<li>大さじ約 ${result.tbsp} 杯</li>`;
+            }
+            if (result.tsp >= 1) {
+                html += `<li>小さじ約 ${result.tsp} 杯</li>`;
+            }
+            
+            html += '</ul>';
+            html += '<p class="note">※ 小数点以下は四捨五入されています</p>';
+            resultDiv.innerHTML = html;
+        }
+
+        // キーボードショートカット
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const activeContainer = document.querySelector('.converter-container.active');
+                if (activeContainer.id === 'single-converter') {
+                    convertSingle();
+                } else if (activeContainer.id === 'multiple-converter') {
+                    convertMultiple();
+                } else if (activeContainer.id === 'reverse-converter') {
+                    convertReverse();
+                }
+            }
+        });
+
+        // 入力値の検証
+        function validateInput(input) {
+            if (input.value < 0) {
+                input.value = 0;
+            }
+        }
+
+        // すべての数値入力フィールドに検証を追加
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.addEventListener('input', () => validateInput(input));
+        });
+
+        // ページ読み込み時に初期化を実行
+        window.onload = init;
+    </script>
+</body>
+</html>
